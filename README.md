@@ -1,0 +1,2 @@
+# rolecard_runtime
+一个适用于astrbot的通用复杂角色卡运行时插件，支持分阶段人设和事件池触发
