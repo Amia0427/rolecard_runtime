@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>角色卡运行时</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; background: #f4f6f8; color: #1f2933; }
+    body { max-width: 1100px; margin: 0 auto; padding: 28px; }
+    header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+    h1 { font-size: 24px; margin: 0; }
+    button, input { font: inherit; padding: 8px 10px; border: 1px solid #b8c1cc; border-radius: 4px; background: white; }
+    button { cursor: pointer; }
+    .panel { background: white; border: 1px solid #d8dee6; border-radius: 6px; padding: 16px; margin-top: 18px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+    label { display: grid; gap: 4px; color: #52606d; font-size: 13px; }
+    .wide { min-width: 260px; }
+    .danger { color: #9b1c1c; }
+    .muted { color: #697586; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media (max-width: 620px) { body { padding: 16px; } th, td { padding: 8px 4px; } .wide { min-width: 100%; } }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; border-bottom: 1px solid #e5e9ef; padding: 10px 8px; overflow-wrap: anywhere; }
+    #message { min-height: 20px; color: #52606d; }
+  </style>
+</head>
+<body>
+  <header><h1>角色卡运行时</h1><button id="refresh">刷新</button></header>
+  <p id="message" role="status"></p>
+  <section class="panel">
+    <h2>导入卡包</h2>
+    <form id="uploadForm"><input id="file" name="file" type="file" accept=".zip,.json" required><button type="submit">导入 ZIP / JSON</button></form>
+  </section>
+  <section class="panel"><h2>已安装卡包</h2><table><thead><tr><th>名称</th><th>ID</th><th>版本</th><th>内容</th><th>操作</th></tr></thead><tbody id="cards"></tbody></table><pre id="diagnostics" class="muted"></pre></section>
+  <section class="panel">
+    <h2>会话绑定</h2>
+    <table><thead><tr><th>会话 ID</th><th>卡包 ID</th><th>操作</th></tr></thead><tbody id="bindings"></tbody></table>
+    <p id="noBindings" class="muted" hidden>暂无会话绑定</p>
+  </section>
+  <section class="panel">
+    <h2>会话状态</h2>
+    <div class="controls">
+      <label class="wide">会话 ID<input id="sessionId" placeholder="unified_msg_origin"></label>
+      <label>成员 ID<input id="memberId" placeholder="member_id"></label>
+      <button id="queryState" type="button">查询</button>
+      <button id="unbindSession" type="button">解除当前会话绑定</button>
+      <button id="resetState" type="button">重置状态</button>
+      <button id="enableNsfw" type="button">开启成人</button>
+      <button id="disableNsfw" type="button">关闭成人</button>
+    </div>
+    <pre id="state" class="muted">输入会话和成员 ID 后查询。</pre>
+  </section>
+  <section class="panel"><h2>最近审计</h2><pre id="audits"></pre></section>
+  <script src="/api/plugin/page/bridge-sdk.js"></script>
+  <script>
+    const message = document.getElementById('message');
+    const sessionId = document.getElementById('sessionId');
+    const memberId = document.getElementById('memberId');
+    const stateOutput = document.getElementById('state');
+    let selectedPackageId = '';
+    function getBridge() {
+      return window.AstrBotPluginPage || null;
+    }
+
+    async function requestJson(path, options = {}) {
+      const bridge = getBridge();
+      if (!bridge) throw new Error('请从 AstrBot 登录后的插件页面打开此面板');
+      if (typeof bridge.ready === 'function') await bridge.ready();
+      const [pathname, search = ''] = path.split('?', 2);
+      const endpoint = pathname.replace(/^\/+/, '');
+      const method = (options.method || 'GET').toUpperCase();
+      if (method === 'GET') {
+        const params = Object.fromEntries(new URLSearchParams(search).entries());
+        return bridge.apiGet(endpoint, Object.keys(params).length ? params : undefined);
+      }
+      return bridge.apiPost(endpoint, options.body || {});
+    }
+
+    async function uploadCard(file) {
+      const bridge = getBridge();
+      if (!bridge || typeof bridge.upload !== 'function') {
+        throw new Error('请从 AstrBot 登录后的插件页面打开此面板');
+      }
+      if (typeof bridge.ready === 'function') await bridge.ready();
+      return bridge.upload('cards/import', file);
+    }
+    function selectedCardId() {
+      return selectedPackageId;
+    }
+    async function loadState() {
+      const query = new URLSearchParams();
+      if (sessionId.value.trim()) query.set('session_id', sessionId.value.trim());
+      if (memberId.value.trim()) query.set('member_id', memberId.value.trim());
+      const data = await requestJson(`/state?${query}`);
+      stateOutput.textContent = JSON.stringify(data, null, 2);
+    }
+    async function loadBindings() {
+      const data = await requestJson('/state');
+      const tbody = document.getElementById('bindings');
+      tbody.textContent = '';
+      const bindings = data.bindings || [];
+      document.getElementById('noBindings').hidden = bindings.length > 0;
+      for (const binding of bindings) {
+        const row = document.createElement('tr');
+        for (const value of [binding.session_id, binding.package_id]) {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        }
+        const cell = document.createElement('td');
+        const button = document.createElement('button');
+        button.textContent = '解除绑定';
+        button.onclick = () => unbindSession(binding.session_id);
+        cell.appendChild(button);
+        row.appendChild(cell);
+        tbody.appendChild(row);
+      }
+    }
+    async function unbindSession(value) {
+      if (!value) { message.textContent = '请先填写会话 ID'; return; }
+      try {
+        await requestJson('/binding', { method: 'POST', body: {session_id: value, package_id: ''} });
+        message.textContent = `已解除会话绑定：${value}`;
+        await loadBindings();
+        await loadState();
+      } catch (error) { message.textContent = `解除绑定失败：${error.message}`; }
+    }
+    async function load() {
+      const cards = await requestJson('/cards');
+      const tbody = document.getElementById('cards');
+      tbody.textContent = '';
+      for (const card of cards.cards || []) {
+        const row = document.createElement('tr');
+        row.onclick = () => { selectedPackageId = card.package_id; message.textContent = `已选择 ${card.display_name}`; };
+        const values = [card.display_name, card.package_id, `v${card.version}`, `阶段 ${card.stages} / 事件 ${card.events} / 成人 ${card.adult_events}`];
+        for (const value of values) { const cell = document.createElement('td'); cell.textContent = value; row.appendChild(cell); }
+        const cell = document.createElement('td');
+        const use = document.createElement('button');
+        use.textContent = '绑定当前会话';
+        use.onclick = async () => {
+          if (!sessionId.value.trim()) { message.textContent = '请先填写会话 ID'; return; }
+          selectedPackageId = card.package_id;
+          try {
+            await requestJson('/binding', { method: 'POST', body: {session_id: sessionId.value.trim(), package_id: card.package_id} });
+            message.textContent = `已绑定 ${card.display_name}`;
+            await loadBindings();
+            await loadState();
+          } catch (error) { message.textContent = `绑定失败：${error.message}`; }
+        };
+        cell.appendChild(use);
+        const button = document.createElement('button');
+        button.className = 'danger';
+        button.textContent = '删除';
+        button.onclick = async () => {
+          try {
+            await requestJson(`/cards/${card.package_id}/delete`, { method: 'POST' });
+            message.textContent = `已删除 ${card.display_name}`;
+            if (selectedPackageId === card.package_id) selectedPackageId = '';
+            await load();
+          } catch (error) { message.textContent = `删除失败：${error.message}`; }
+        };
+        cell.appendChild(button); row.appendChild(cell); tbody.appendChild(row);
+      }
+      const diagnostics = cards.diagnostics || [];
+      document.getElementById('diagnostics').textContent = diagnostics.length
+        ? '未启用卡包：\n' + diagnostics.map(item => `${item.path}：${item.reason}`).join('\n')
+        : '';
+      await loadBindings();
+      const audits = await requestJson('/audits');
+      document.getElementById('audits').textContent = JSON.stringify(audits.audits || [], null, 2);
+    }
+    document.getElementById('refresh').onclick = () => load().catch(error => { message.textContent = `加载失败：${error.message}`; });
+    document.getElementById('queryState').onclick = () => loadState().catch(error => { message.textContent = `查询失败：${error.message}`; });
+    document.getElementById('unbindSession').onclick = () => unbindSession(sessionId.value.trim());
+    document.getElementById('resetState').onclick = async () => {
+      const cardId = selectedCardId();
+      if (!sessionId.value.trim() || !memberId.value.trim() || !cardId) { message.textContent = '请填写会话、成员并点击一张卡片'; return; }
+      try { await requestJson('/state/reset', { method: 'POST', body: {session_id: sessionId.value.trim(), member_id: memberId.value.trim(), package_id: cardId} }); message.textContent = '状态已重置'; await loadState(); } catch (error) { message.textContent = `重置失败：${error.message}`; }
+    };
+    async function setNsfw(enabled) {
+      if (!sessionId.value.trim() || !memberId.value.trim()) { message.textContent = '请先填写会话和成员 ID'; return; }
+      try { await requestJson('/state/nsfw', { method: 'POST', body: {session_id: sessionId.value.trim(), member_id: memberId.value.trim(), enabled} }); message.textContent = enabled ? '成人事件已开启' : '成人事件已关闭'; await loadState(); } catch (error) { message.textContent = `设置失败：${error.message}`; }
+    }
+    document.getElementById('enableNsfw').onclick = () => setNsfw(true);
+    document.getElementById('disableNsfw').onclick = () => setNsfw(false);
+    document.getElementById('uploadForm').onsubmit = async event => {
+      event.preventDefault();
+      const file = document.getElementById('file').files[0];
+      if (!file) return;
+      try {
+        await uploadCard(file);
+        message.textContent = '导入完成';
+        await load();
+      } catch (error) { message.textContent = `导入失败：${error.message}`; }
+    };
+    load().catch(error => { message.textContent = `加载失败：${error}`; });
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+name: astrbot_plugin_rolecard_runtime
+display_name: 阶段角色卡运行时
+author: rolecard_runtime contributors
+author_url: https://github.com/Amia0427/rolecard_runtime
+repo: https://github.com/Amia0427/rolecard_runtime
+description: 通用阶段角色卡运行时，支持 V2 卡片、世界书、阶段人设、事件池和状态审计。
+desc: 将带阶段人设、变量状态和事件池的角色卡接入 AstrBot。
+version: 0.2.0
+category: AI 增强
+tags:
+  - 角色卡
+  - 阶段人设
+  - 事件池
+  - 状态机
+support_platforms:
+  - aiocqhttp
+  - qq_official
+astrbot_version: ">=4.28.0"
+pages:
+  - name: 角色卡面板
+    title: 阶段角色卡运行时

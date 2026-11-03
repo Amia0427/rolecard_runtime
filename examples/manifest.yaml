@@ -1,0 +1,22 @@
+schema: astrbot-rolecard/v1
+package_id: example-card
+display_name: 示例阶段角色卡
+version: 1.0.0
+card:
+  path: card/character.json
+state:
+  contract: state/contract.yaml
+  audit_prompt: state/audit_system_prompt.md
+stages:
+  - id: stage_1
+    name: 初识
+    path: prompts/stage_1.md
+worldbook:
+  - name: core
+    path: worldbook/core.md
+    mode: resident
+events:
+  - path: events/example.md
+adult_events:
+  - path: adult_events/example.md
+greeting: greetings/first_mes.md

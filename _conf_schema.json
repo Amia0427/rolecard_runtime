@@ -1,0 +1,39 @@
+{
+  "enabled": {
+    "description": "启用角色卡运行时",
+    "type": "bool",
+    "default": true
+  },
+  "audit_provider_id": {
+    "description": "专用状态审计模型 Provider ID",
+    "_special": "select_provider",
+    "hint": "留空时不执行状态审计，主模型回复仍正常发送。",
+    "type": "string",
+    "default": ""
+  },
+  "audit_timeout_seconds": {
+    "description": "状态审计超时秒数",
+    "type": "int",
+    "default": 60
+  },
+  "status_image_enabled": {
+    "description": "审计并保存状态后发送状态图片",
+    "type": "bool",
+    "default": true
+  },
+  "status_font_path": {
+    "description": "状态图片中文字体文件路径；留空时使用系统字体",
+    "type": "string",
+    "default": ""
+  },
+  "packages_dir": {
+    "description": "卡包存储目录",
+    "type": "string",
+    "default": ""
+  },
+  "node_executable": {
+    "description": "EJS 执行用 Node.js 路径；留空使用 PATH 中的 node",
+    "type": "string",
+    "default": "node"
+  }
+}

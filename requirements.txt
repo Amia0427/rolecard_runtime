@@ -1,0 +1,4 @@
+PyYAML>=6.0,<7
+Pillow>=10,<13
+jsonschema>=4.18,<5
+jsonpatch>=1.33,<2
