@@ -1,0 +1,16 @@
+initial_state:
+  relation_stage: first_meeting
+  trust: 0
+  dependency: 0
+  feminine_acceptance: 0
+  lust: null
+  active_event: null
+  event_step: 0
+  completed_events: []
+  flags:
+    welcome_done: false
+  turn_count: 0
+  event_history: {}
+  scene:
+    location: bookshop
+    activity: browsing

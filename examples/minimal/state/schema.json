@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "书店示例状态",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "relation_stage", "trust", "dependency", "feminine_acceptance", "lust",
+    "active_event", "event_step", "completed_events", "flags", "turn_count",
+    "event_history", "scene"
+  ],
+  "properties": {
+    "relation_stage": { "enum": ["first_meeting", "familiar"] },
+    "trust": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "dependency": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "feminine_acceptance": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "lust": { "type": "null" },
+    "active_event": { "enum": [null, "welcome", "restock"] },
+    "event_step": { "type": "integer", "minimum": 0 },
+    "completed_events": {
+      "type": "array",
+      "items": { "enum": ["welcome", "restock"] },
+      "uniqueItems": true
+    },
+    "flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["welcome_done"],
+      "properties": { "welcome_done": { "type": "boolean" } }
+    },
+    "turn_count": { "type": "integer", "minimum": 0 },
+    "event_history": {
+      "type": "object",
+      "propertyNames": { "enum": ["welcome", "restock"] },
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["location", "activity"],
+      "properties": {
+        "location": { "enum": ["bookshop", "street"] },
+        "activity": { "enum": ["browsing", "sorting", "chatting"] }
+      }
+    }
+  }
+}

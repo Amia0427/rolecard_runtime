@@ -54,6 +54,24 @@ Python 测试实际调用 Node 完成 EJS 渲染，覆盖 await getwi、关闭�
 
 2026-11-03（CST）：小目标“将完整通用插件推送至指定公开仓库并实际回读”已完成；推送使用快进更新，未强制覆盖远端，未创建或上传任何私人角色卡发行附件。插件 ZIP 在本机 `dist/` 保存，未另建 GitHub Release。
 
+## 卡包格式公开与 README 整理
+
+2026-11-03（CST）：沿用插件现有的 `astrbot-rolecard/v1`，补充[格式文档](card-format.md)、[manifest JSON Schema](../schemas/manifest.schema.json)、[原创书店示例](../examples/minimal/)和示例构建入口；README 重新整理了安装、启用和制卡步骤。运行时源码、插件版本及依赖未变，本轮没有加入任何私人角色内容。
+
+本轮实际执行结果：
+
+- `python -m pytest -q -p no:cacheprovider`：**102 项通过**，新增 7 项公开示例检查。
+- `node --test tests/panel_bridge.test.cjs`：**7 项通过**。
+- `python -m compileall -q main.py astrbot_plugin_rolecard_runtime scripts tests`：通过。
+- `python scripts/build_example.py`：生成 `dist/example-card.zip` 和 `dist/example-card.json`；目录、ZIP、内嵌 JSON 的实际载入结果一致，三种方式导入仓库后重新加载也一致。
+- 示例使用真实 Node/EJS 渲染，检查了 welcome 启动与成功证据、阶段与 flags 结算、restock 场景筛选、暂停分支、两轮冷却和重复成功；mvu 更新块可以提取、应用场景补丁，并影响下一轮候选。
+- manifest Schema 校验通过；对事件池漏写 EJS 引擎和误选 declarative 的清单均能报错。Schema 是作者离线工具，未改成插件新增的强制清单校验。
+- 7 份 Markdown 文档的 19 个本地链接均有目标；公开副本 67 个文本文件扫描未命中私人角色标识、项目绝对路径、服务器地址或常见凭据标记。
+
+发行清单已加入格式说明、Schema、完整示例和示例构建脚本；插件 ZIP 共 52 个成员，已逐字节比对公开副本中的对应文件。它仍使用逐项公开清单，不会递归打包未来文件。样例 ZIP/JSON 和插件 ZIP 均生成在被 Git 忽略的 `dist/`，不作为源码提交。
+
+这些检查验证的是公开文件和离线运行链路。本轮未连接服务器、发送真实模型请求或新建 GitHub Release；先前 95 项测试、35 文件发行包等记录保留为当时快照。
+
 ## 尚未验证
 
 本轮没有连接服务器、替换在线插件或卡包，也没有发送真实聊天、调用真实模型或运行 AstrBot 宿主进程。本轮不把早前私有部署中的验收直接算作公开副本验收；Live/TTS、第三方 agent、所有操作系统与 Node 版本也未覆盖。

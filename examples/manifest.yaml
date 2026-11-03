@@ -1,22 +1,38 @@
 schema: astrbot-rolecard/v1
 package_id: example-card
-display_name: 示例阶段角色卡
+display_name: 书店示例
 version: 1.0.0
 card:
   path: card/character.json
 state:
   contract: state/contract.yaml
+  schema: state/schema.json
+  writable_paths: [scene]
+  update_mode: audit
   audit_prompt: state/audit_system_prompt.md
+runtime:
+  engine: ejs
+  event_pool: runtime/event_pool.ejs
+  keyword_matching: false
 stages:
-  - id: stage_1
-    name: 初识
-    path: prompts/stage_1.md
+  - id: first_meeting
+    name: 初次见面
+    path: prompts/first_meeting.md
+  - id: familiar
+    name: 熟悉之后
+    path: prompts/familiar.md
 worldbook:
-  - name: core
-    path: worldbook/core.md
+  - name: 店铺约定
+    path: worldbook/shop.md
     mode: resident
+  - name: 当前场景
+    path: runtime/scene.ejs
+    mode: ejs
+    condition:
+      path: scene.location
+      value: bookshop
 events:
-  - path: events/example.md
-adult_events:
-  - path: adult_events/example.md
+  - path: events/welcome.md
+  - path: events/restock.md
+adult_events: []
 greeting: greetings/first_mes.md

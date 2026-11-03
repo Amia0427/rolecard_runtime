@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Amia0427/rolecard_runtime/blob/main/schemas/manifest.schema.json",
+  "title": "AstrBot RoleCard manifest",
+  "description": "校验 astrbot-rolecard/v1 卡包的 manifest.yaml。它是作者工具的校验规则，不会替代插件运行时检查。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "package_id", "stages"],
+  "properties": {
+    "schema": { "const": "astrbot-rolecard/v1" },
+    "package_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!\\.{1,2}$)[^/\\\\]+$"
+    },
+    "display_name": { "type": "string" },
+    "version": { "type": "string", "minLength": 1 },
+    "card": { "$ref": "#/$defs/card" },
+    "state": { "$ref": "#/$defs/state" },
+    "runtime": { "$ref": "#/$defs/runtime" },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "worldbook": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/worldbookEntry" }
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/fileEntry" }
+    },
+    "adult_events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/fileEntry" }
+    },
+    "greeting": { "$ref": "#/$defs/path" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "runtime": {
+            "properties": { "event_pool": { "type": "string", "minLength": 1 } },
+            "required": ["event_pool"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "runtime": {
+            "properties": { "engine": { "const": "ejs" } },
+            "required": ["engine"]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(^|/)\\.\\.?(/|$)).+$"
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "path": { "$ref": "#/$defs/path" } }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contract": { "$ref": "#/$defs/path" },
+        "schema": { "$ref": "#/$defs/path" },
+        "writable_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "update_mode": { "enum": ["audit", "mvu"] },
+        "audit_prompt": { "$ref": "#/$defs/path" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "engine": { "enum": ["declarative", "ejs"] },
+        "event_pool": { "$ref": "#/$defs/path" },
+        "keyword_matching": { "type": "boolean" }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "path": { "$ref": "#/$defs/path" }
+      }
+    },
+    "fileEntry": {
+      "oneOf": [
+        { "$ref": "#/$defs/path" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path"],
+          "properties": { "path": { "$ref": "#/$defs/path" } }
+        }
+      ]
+    },
+    "worldbookEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "path": { "$ref": "#/$defs/path" },
+        "mode": { "enum": ["resident", "conditional", "keyword", "ejs"] },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "condition": {
+          "oneOf": [
+            { "type": "string" },
+            { "$ref": "#/$defs/predicate" },
+            {
+              "type": "array",
+              "items": { "$ref": "#/$defs/predicate" }
+            }
+          ]
+        }
+      }
+    },
+    "predicate": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["path"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "op": { "enum": ["equals", "gte", "lte", "contains", "not_contains"] },
+            "value": {}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["all"],
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/predicate" }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["any"],
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/predicate" }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["not"],
+          "properties": { "not": { "$ref": "#/$defs/predicate" } },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
